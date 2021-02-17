@@ -10,8 +10,8 @@ viableSavingLoc = 'C:\\Users\\tomca\\OneDrive\\Documents\\GitHub\\RapidPCB-Githu
 downloadloc = 'C:\\Users\\tomca\\Dropbox\\RapidPCB\\Part Data\\adafruit\\PCBs'
 userName="adafruit"
 
-updateUserRepos = True
-updateFileContents = True
+updateUserRepos = False
+updateFileContents = False
 updateDownloadList = True
 contentFileCap=1000
 
@@ -48,6 +48,9 @@ class githubScraperUserRepos:
 		self.repoScraped[self.indexRepoByName(repoName)]=val
 	
 	def dumpPickle(self,pickleFile):
+		if not os.path.exists(os.path.dirname(pickleFile)):
+			#print("Make Dir")
+			os.makedirs(os.path.dirname(pickleFile))
 		with open(pickleFile, 'wb') as f:
 			pickle.dump(self.repoUser, f, pickle.HIGHEST_PROTOCOL)
 			pickle.dump(self.repoNums, f, pickle.HIGHEST_PROTOCOL)
@@ -87,6 +90,9 @@ class githubScraperContentFiles:
 		self.fileNums=self.fileNums+1
 	
 	def dumpPickle(self,pickleFile):
+		if not os.path.exists(os.path.dirname(pickleFile)):
+			#print("Make Dir")
+			os.makedirs(os.path.dirname(pickleFile))
 		with open(pickleFile, 'wb') as f:
 			pickle.dump(self.repoName, f, pickle.HIGHEST_PROTOCOL)
 			pickle.dump(self.fileNames, f, pickle.HIGHEST_PROTOCOL)
@@ -123,6 +129,9 @@ class githubScraperDownloadList:
 		self.fileNums=self.fileNums+1
 		
 	def dumpPickle(self,pickleFile):
+		if not os.path.exists(os.path.dirname(pickleFile)):
+			#print("Make Dir")
+			os.makedirs(os.path.dirname(pickleFile))
 		with open(pickleFile, 'wb') as f:
 			pickle.dump(self.fileDownloadURLs, f, pickle.HIGHEST_PROTOCOL)
 			pickle.dump(self.fileSavePath, f, pickle.HIGHEST_PROTOCOL)
@@ -242,10 +251,10 @@ for repoName in adafruitRepos.repoNames:
 #Create download list
 numExtCheck=len(fileSeachExtentions)
 
-adafruitContentFiles=githubScraperDownloadList()
+adafruitDownloadList=githubScraperDownloadList()
 if os.path.exists(viableSavingLoc+"\\adafruitDownloadList.pickle") and not updateDownloadList:
 	print("Loading download list from "+viableSavingLoc+"\\adafruitDownloadList.pickle")
-	adafruitContentFiles.loadPickle(viableSavingLoc+"\\adafruitDownloadList.pickle")
+	adafruitDownloadList.loadPickle(viableSavingLoc+"\\adafruitDownloadList.pickle")
 else:
 	print("Fresh download list at "+viableSavingLoc+"\\adafruitDownloadList.pickle")
 
@@ -277,44 +286,44 @@ for repoName in adafruitRepos.repoNames:
 							extentionFlag=True
 					
 					if extentionFlag:
-						adafruitContentFiles.addDownloadFile(adafruitContentFiles.fileDownloadURLs[i],downloadloc+"\\"+repoName+"\\"+adafruitContentFiles.filePaths[i])
+						adafruitDownloadList.addDownloadFile(adafruitContentFiles.fileDownloadURLs[i],downloadloc+"\\"+repoName+"\\"+adafruitContentFiles.filePaths[i])
 						print("Adding \""+adafruitContentFiles.filePaths[i]+"\" to downloadlist")
 				
 				adafruitContentFiles.fileScraped[i]=True
 			
 			adafruitContentFiles.dumpPickle(viableSavingLoc+"\\adafruitRepos_"+repoName+".pickle")
-			adafruitContentFiles.dumpPickle(viableSavingLoc+"\\adafruitDownloadList.pickle")
+			adafruitDownloadList.dumpPickle(viableSavingLoc+"\\adafruitDownloadList.pickle")
 			print("Search Finished")
 	
 	else:
 		print("/// Files does not exist "+viableSavingLoc+"\\adafruitRepos_"+repoName+".pickle")
 	
 	
-print("Downloadlist is Compiled #Files = %5d"%adafruitContentFiles.fileNums)
+print("Downloadlist is Compiled #Files = %5d"%adafruitDownloadList.fileNums)
 
-for i in range(adafruitContentFiles.fileNums):
-	print("Checking "+adafruitContentFiles.fileSavePath[i])
+for i in range(adafruitDownloadList.fileNums):
+	print("Checking "+adafruitDownloadList.fileSavePath[i])
 
-	if os.path.exists(adafruitContentFiles.fileSavePath[i]):
-		print("//"+adafruitContentFiles.fileSavePath[i]+" Already Exists")
+	if os.path.exists(adafruitDownloadList.fileSavePath[i]):
+		print("//"+adafruitDownloadList.fileSavePath[i]+" Already Exists")
 	else:
 		try:
-			#print(os.path.dirname(adafruitContentFiles.fileSavePath[i]))
-			if not os.path.exists(os.path.dirname(adafruitContentFiles.fileSavePath[i])):
+			#print(os.path.dirname(adafruitDownloadList.fileSavePath[i]))
+			if not os.path.exists(os.path.dirname(adafruitDownloadList.fileSavePath[i])):
 				#print("Make Dir")
-				os.makedirs(os.path.dirname(adafruitContentFiles.fileSavePath[i]))
+				os.makedirs(os.path.dirname(adafruitDownloadList.fileSavePath[i]))
 			
-			print("Downloading "+adafruitContentFiles.fileDownloadURLs[i])
-			req = requests.get(adafruitContentFiles.fileDownloadURLs[i], allow_redirects=True)
+			print("Downloading "+adafruitDownloadList.fileDownloadURLs[i])
+			req = requests.get(adafruitDownloadList.fileDownloadURLs[i], allow_redirects=True)
 			
-			open(adafruitContentFiles.fileSavePath[i], 'wb').write(req.content)
-			adafruitContentFiles.fileDownloaded[i]=True
-			adafruitContentFiles.dumpPickle(viableSavingLoc+"\\adafruitDownloadList.pickle")
+			open(adafruitDownloadList.fileSavePath[i], 'wb').write(req.content)
+			adafruitDownloadList.fileDownloaded[i]=True
+			adafruitDownloadList.dumpPickle(viableSavingLoc+"\\adafruitDownloadList.pickle")
 			
 			print("Download Complete")
 			
 		except:
-			print("Error downloading "+adafruitContentFiles.fileDownloadURLs[i]+" to "+adafruitContentFiles.fileSavePath[i])
+			print("Error downloading "+adafruitDownloadList.fileDownloadURLs[i]+" to "+adafruitDownloadList.fileSavePath[i])
 		
 
 			
