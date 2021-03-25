@@ -12,3 +12,5 @@ severString = "mongodb+srv://"+mongoDBUser+":"+mongoDBPassword + \
 userScraper = gitScraper(ACCESS_TOKEN, severString, "PartStudy2")
 
 userScraper.updateUser(userName)
+
+userScraper.updateRepos(userName)
