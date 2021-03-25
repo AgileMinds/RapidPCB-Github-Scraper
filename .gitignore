@@ -1,3 +1,5 @@
 
 *.plog
 Python_Mongo/secret.py
+*.pyc
+*.pyc

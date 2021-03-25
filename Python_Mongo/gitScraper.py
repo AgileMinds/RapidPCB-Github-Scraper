@@ -72,7 +72,7 @@ class gitScraper:
                         _userName+","+str(_refreshFlag)+")")
         # loop though repos on user
         userRepoLen = self.scraperDatabase["pcbUsers"].find({'userID': _userName})[
-            'userRepos'].length
+            'userRepos']
         print(userRepoLen)
         # check if current or refresh flag
 
