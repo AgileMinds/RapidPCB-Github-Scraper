@@ -1,0 +1,1 @@
+Logger Connected to Database: PartStudy2, Collection Name: PyLogs, Log Name: 20210325_003616_PyLoggitScraper.__init__()_databaseDest=PartStudy2Connecing to GithubConneced to GithubConnecing to MongDBConneced to MongDBgitScraper.updateUser(adafruit)

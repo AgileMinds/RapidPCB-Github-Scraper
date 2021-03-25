@@ -1,0 +1,1 @@
+Logger Connected to Database: PartStudy, Collection Name: PyLogs, Log Name: 20210325_002333_PyLoggitScraper.__init__()_gitUserName=adafruit_databaseDest=PartStudy
