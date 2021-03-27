@@ -97,7 +97,7 @@ class githubScraperContentFiles:
 			self.fileDownloadURLs = pickle.load(f)
 			self.fileSizes = pickle.load(f)
 			self.fileScraped = pickle.load(f)
-			#self.fileNums = pickle.load(f)
+			self.fileNums = pickle.load(f)
 
 
 sparkfunRepos=githubScraperUserRepos(userName)

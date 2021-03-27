@@ -40,6 +40,8 @@ class pyLogger:
                 self.locLogFlag = True
                 if self.terminalPrint:
                     print("Local Log File: "+locLogFilepath)
+                    self.locLogFile.write("Logging to Terminal ENABLED")
+                    self.locLogFile.write("\n")
             except Exception as e:
                 if self.terminalPrint:
                     print("Error Opening Local log File: " + str(e))
@@ -50,6 +52,7 @@ class pyLogger:
                 print("No Remote Logging")
             if self.locLogFlag:
                 self.locLogFile.write("No Remote Logging")
+                self.locLogFile.write("\n")
         else:
             try:
                 if _databaseName:
@@ -62,9 +65,14 @@ class pyLogger:
                 if self.terminalPrint:
                     print("Logger Connected to Database: "+databaseName +
                           ", Collection Name: "+collectionName+", Log Name: "+logName)
+                    self.logCollection.update_one({'_id': self.logMongoID}, {
+                                                  '$push': {'logs': "Logging to Terminal ENABLED"}})
                 if self.locLogFlag:
                     self.locLogFile.write("Logger Connected to Database: "+databaseName +
                                           ", Collection Name: "+collectionName+", Log Name: "+logName)
+                    self.locLogFile.write("\n")
+                    self.logCollection.update_one({'_id': self.logMongoID}, {
+                                                  '$push': {'logs': "Local Logging to \""+locLogFilepath+"\""}})
             except Exception as e:
                 self.mongoLogFlag = False
 
@@ -74,6 +82,7 @@ class pyLogger:
                 if self.locLogFlag:
                     self.locLogFile.write("Error Connecting to Database")
                     self.locLogFile.write("Error: " + str(e))
+                    self.locLogFile.write("\n")
 
     def log(self, _logText, _logLvl=-1):
         _logLvlFlag = True
@@ -86,8 +95,11 @@ class pyLogger:
                 print(_logText)
 
             if self.locLogFlag:
-                self.locLogFile.write(_logText)
-
+                try:
+                    self.locLogFile.write(_logText)
+                    self.locLogFile.write("\n")
+                except:
+                    self.locLogFile.write("[Corrupt Entry]\n")
             if self.mongoLogFlag:
                 self.logCollection.update_one({'_id': self.logMongoID}, {
                     '$push': {'logs': _logText}})

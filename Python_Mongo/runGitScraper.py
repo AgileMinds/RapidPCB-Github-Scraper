@@ -12,3 +12,9 @@ userScraper = gitScraper(secureInputs.GIT_ACCESS_TOKEN,
 userScraper.updateUser(userName)
 
 userScraper.updateRepos(userName)
+
+userName = "sparkfun"
+
+userScraper.updateUser(userName)
+
+userScraper.updateRepos(userName)
