@@ -96,6 +96,7 @@ class gitScraper:
                     "get_repo("+_userName+"/"+userDBRepo['name']+")")
                 remoteRepo = self.git.get_repo(
                     _userName+"/"+userDBRepo['name'])
+                contents = []
                 try:
                     contents = remoteRepo.get_contents("")
                 except:
@@ -134,6 +135,8 @@ class gitScraper:
                         break
                 try:
                     del file_content
+                except:
+                    self.logger.log("Error del file_content")
                 # set flag current
                 self.scraperDatabase["pcbUsers"].update_one(
                     {'userID': _userName, 'userRepos.name': userDBRepo['name']}, {'$set': {'userRepos.$.current': True}})
