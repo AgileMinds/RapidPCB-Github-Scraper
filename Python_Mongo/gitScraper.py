@@ -4,6 +4,9 @@ import pymongo
 import os
 from pyLog import pyLogger
 from github import Github
+from pathlib import Path
+import requests
+import hashlib
 
 
 class gitScraper:
@@ -70,7 +73,7 @@ class gitScraper:
                                 "\" exists for \"" + _userName+"\"")
 
             # debugging
-            #repoCount = repoCount+1
+            # repoCount = repoCount+1
             # if repoCount > 10:
                 # break
 
@@ -140,6 +143,145 @@ class gitScraper:
                 # set flag current
                 self.scraperDatabase["pcbUsers"].update_one(
                     {'userID': _userName, 'userRepos.name': userDBRepo['name']}, {'$set': {'userRepos.$.current': True}})
+
+            # Stop after one repo for debug
+            # break
+
+###########################
+    def pcbBoardFilter(self, _userName, _cadType='Eagle'):
+        self.logger.log("gitScraper.pcbBoardFilter(" +
+                        _userName+","+_cadType+")")
+
+        # define file extentions to search
+
+        if _cadType == 'Eagle':
+            _searchExt = ['.brd', '.sch']
+            self.logger.log("_searchExt=['.brd','.sch']")
+
+        else:
+            _searchExt = ['.brd', '.sch']
+            self.logger.log("_searchExt=['.brd','.sch']")
+
+        # loop though repos on user
+        userDBRepoList = self.scraperDatabase["pcbUsers"].find(
+            {'userID': _userName}).next()['userRepos']
+
+        for userDBRepo in userDBRepoList:
+            self.logger.log("Checking " + userDBRepo['name']+" for CAD Files")
+            # get file list
+
+            fileNames = []
+            filePaths = []
+            fileSHAs = []
+            fileDownloadURLs = []
+            fileSizes = []
+            fileExts = []
+            fileExtIndex = []
+            fileFolders = []
+            numFiles = 0
+
+            fileList = self.scraperDatabase["pcbRepos"].find(
+                {'_id': userDBRepo['dbID']}).next()['files']
+
+            for f in fileList:
+                fileNames.append(f['name'])
+                filePaths.append(f['path'])
+                fileSHAs.append(f['sha'])
+                fileDownloadURLs.append(f['download_url'])
+                fileSizes.append(f['size'])
+                fileExt = Path(f['name']).suffix
+                fileExts.append(fileExt)
+                if fileExt in _searchExt:
+                    fileExtIndex.append(_searchExt.index(fileExt))
+                else:
+                    fileExtIndex.append(-1)
+                fileFolders.append(str(Path(f['path']).parent))
+                numFiles = numFiles+1
+
+            # search for matching extention
+            for i in range(numFiles):
+                # find board files
+                if fileExtIndex[i] == 0:
+                    self.logger.log("Board File "+filePaths[i])
+                    # find matching sch files
+                    for j in range(numFiles):
+                        if fileExtIndex[j] == 1 and fileFolders[i] == fileFolders[j] and Path(filePaths[i]).stem == Path(filePaths[i]).stem:
+                            self.logger.log("Schematic File"+filePaths[j])
+                            # define project name
+                            projectName = Path(filePaths[i]).stem
+
+                            try:
+
+                                if not self.scraperDatabase["pcbBoards"].find_one({'userID': _userName, 'name': projectName}):
+                                    self.logger.log(
+                                        "Adding "+projectName+" to Database pcbBoards")
+                                    doc_id = self.scraperDatabase["pcbBoards"].insert_one(
+                                        {'userID': _userName, 'name': projectName, 'cadType': _cadType, 'quotes': [], 'partsList': [], 'files': []}).inserted_id
+
+                                    # Download files
+                                    self.logger.log(
+                                        "Downloading Board File: \""+fileDownloadURLs[i]+"\"")
+                                    req = requests.get(
+                                        fileDownloadURLs[i], allow_redirects=True)
+                                    boardFile = req.content
+                                    fileHash = hashlib.sha224(
+                                        boardFile).digest()
+                                    boardFile = boardFile.decode(
+                                        'utf-8', 'ignore')
+
+                                    if not self.scraperDatabase["pcbFiles"].find_one({'fileHash': fileHash}):
+                                        file_id = self.scraperDatabase["pcbFiles"].insert_one(
+                                            {'fileName': fileNames[i], 'fileHash': fileHash, 'fileContents': boardFile}).inserted_id
+                                        self.logger.log(
+                                            "Uploading File: \""+fileNames[i]+"\"")
+                                    else:
+                                        file_id = self.scraperDatabase["pcbFiles"].find_one(
+                                            {'fileHash': fileHash}).get('_id')
+                                        self.logger.log(
+                                            "File Exists: \""+fileNames[i]+"\", HASH=\""+str(fileHash)+"\"")
+
+                                    self.logger.log(
+                                        "Linking File: \""+fileNames[i]+"\" to \""+projectName+"\"")
+                                    self.scraperDatabase["pcbBoards"].update_one({'_id': doc_id}, {'$push': {
+                                        'files': {'fileName': fileNames[i], 'filetype': fileExts[i], 'fileHash': fileHash}}})
+
+                                    self.logger.log(
+                                        "Downloading Schematic File: \""+fileDownloadURLs[j]+"\"")
+                                    req = requests.get(
+                                        fileDownloadURLs[j], allow_redirects=True)
+                                    schematicFile = req.content
+                                    fileHash = hashlib.sha224(
+                                        schematicFile).digest()
+                                    schematicFile = schematicFile.decode(
+                                        'utf-8', 'ignore')
+
+                                    if not self.scraperDatabase["pcbFiles"].find_one({'fileHash': fileHash}):
+                                        file_id = self.scraperDatabase["pcbFiles"].insert_one(
+                                            {'fileName': fileNames[j], 'fileHash': fileHash, 'fileContents': schematicFile}).inserted_id
+                                        self.logger.log(
+                                            "Uploading File: \""+fileNames[j]+"\"")
+                                    else:
+                                        file_id = self.scraperDatabase["pcbFiles"].find_one(
+                                            {'fileHash': fileHash}).get('_id')
+                                        self.logger.log(
+                                            "File Exists: \""+fileNames[j]+"\", HASH=\""+str(fileHash)+"\"")
+
+                                    self.logger.log(
+                                        "Linking File: \""+fileNames[j]+"\" to \""+projectName+"\"")
+                                    self.scraperDatabase["pcbBoards"].update_one({'_id': doc_id}, {'$push': {
+                                        'files': {'fileName': fileNames[j], 'filetype': fileExts[j], 'fileHash': fileHash}}})
+
+                                else:
+                                    self.logger.log(
+                                        "Board "+projectName+" Exists in Database pcbBoards")
+                            except:
+                                self.logger.log(
+                                    "Error with \""+projectName+"\"")
+                                if self.scraperDatabase["pcbBoards"].find_one({'userID': _userName, 'name': projectName}):
+                                    self.scraperDatabase["pcbBoards"].delete_one(
+                                        {'userID': _userName, 'name': projectName})
+                                    self.logger.log(
+                                        "Removing \""+projectName+"\"")
 
             # Stop after one repo for debug
             # break

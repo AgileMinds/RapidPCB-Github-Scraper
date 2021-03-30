@@ -9,12 +9,15 @@ severString = "mongodb+srv://"+secureInputs.MONGODB_USER+":"+secureInputs.MONGOD
 userScraper = gitScraper(secureInputs.GIT_ACCESS_TOKEN,
                          severString, "PartStudy2")
 
-userScraper.updateUser(userName)
+# userScraper.updateUser(userName)
 
-userScraper.updateRepos(userName)
+# userScraper.updateRepos(userName)
+
+userScraper.pcbBoardFilter(userName)
 
 userName = "sparkfun"
 
-userScraper.updateUser(userName)
+# userScraper.updateUser(userName)
 
-userScraper.updateRepos(userName)
+# userScraper.updateRepos(userName)
+userScraper.pcbBoardFilter(userName)
