@@ -8,7 +8,7 @@ class pyLogger:
     def __init__(self, _terminalPrint, _localLogDir, _serverString, _databaseName, _logName, _logLvl):
         collectionName = 'PyLogs'
         databaseName = "PyLogDB"
-        localLogDir = os.getenv('APPDATA') + "\\pyLogging\\"
+        localLogDir = os.path.join(os.getcwd(), "\\pyLogging\\")
         self.locLogFlag = False
         self.mongoLogFlag = False
         self.terminalPrint = True

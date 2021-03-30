@@ -13,9 +13,13 @@ class gitScraper:
 
     CONTENT_FILE_CAP = 500
 
-    def __init__(self, _gitAcessToken, _databaseString, _databaseDest):
+    def __init__(self, _gitAcessToken, _databaseString, _databaseDest, _fileStorageLocation=[]):
+
+        if _fileStorageLocation == []:
+            _fileStorageLocation = os.path.join(os.getcwd(), "\\pcbFiles\\")
+
         self.logger = pyLogger(
-            True, os.getcwd(), _databaseString, _databaseDest, [], 1)
+            True, os.path.join(_fileStorageLocation, 'pyLogs'), _databaseString, _databaseDest, [], 1)
         self.logger.log("gitScraper.__init__()")
         self.logger.log("_databaseDest="+_databaseDest)
 
@@ -28,7 +32,24 @@ class gitScraper:
             _databaseDest]
         self.logger.log("Conneced to MongDB")
 
+        try:
+            if not Path(_fileStorageLocation).exists():
+                os.makedirs(_fileStorageLocation)
+            self.logger.log("Storing PCB Files at \"" +
+                            _fileStorageLocation+"\"")
+        except:
+            self.logger.log("Error Making Dir at \""+_fileStorageLocation+"\"")
+            _fileStorageLocation = os.path.join(os.getcwd(), "\\pcbFiles\\")
+            if not Path(_fileStorageLocation).exists():
+                os.makedirs(_fileStorageLocation)
+            self.logger.log("Storing PCB Files at \"" +
+                            _fileStorageLocation+"\"")
+
+        self.fileStorageLocation = _fileStorageLocation
+
+
 ##############################
+
     def updateUser(self, _userName, _refreshFlag=False):
         self.logger.log(
             "gitScraper.updateUser("+_userName+","+str(_refreshFlag)+")")
@@ -211,12 +232,17 @@ class gitScraper:
                             projectName = Path(filePaths[i]).stem
 
                             try:
-
+                                # if True:
                                 if not self.scraperDatabase["pcbBoards"].find_one({'userID': _userName, 'name': projectName}):
                                     self.logger.log(
                                         "Adding "+projectName+" to Database pcbBoards")
                                     doc_id = self.scraperDatabase["pcbBoards"].insert_one(
                                         {'userID': _userName, 'name': projectName, 'cadType': _cadType, 'quotes': [], 'partsList': [], 'files': []}).inserted_id
+
+                                    fileSaveLocation = os.path.join(
+                                        self.fileStorageLocation, _userName, projectName)
+                                    if not Path(fileSaveLocation).exists():
+                                        os.makedirs(fileSaveLocation)
 
                                     # Download files
                                     self.logger.log(
@@ -226,24 +252,21 @@ class gitScraper:
                                     boardFile = req.content
                                     fileHash = hashlib.sha224(
                                         boardFile).digest()
-                                    boardFile = boardFile.decode(
-                                        'utf-8', 'ignore')
 
-                                    if not self.scraperDatabase["pcbFiles"].find_one({'fileHash': fileHash}):
-                                        file_id = self.scraperDatabase["pcbFiles"].insert_one(
-                                            {'fileName': fileNames[i], 'fileHash': fileHash, 'fileContents': boardFile}).inserted_id
+                                    fileLoc = os.path.join(
+                                        fileSaveLocation, fileNames[i])
+                                    if not Path(fileLoc).exists():
+                                        open(fileLoc, 'wb').write(boardFile)
                                         self.logger.log(
-                                            "Uploading File: \""+fileNames[i]+"\"")
+                                            "Saveing File: \""+fileLoc+"\"")
                                     else:
-                                        file_id = self.scraperDatabase["pcbFiles"].find_one(
-                                            {'fileHash': fileHash}).get('_id')
                                         self.logger.log(
-                                            "File Exists: \""+fileNames[i]+"\", HASH=\""+str(fileHash)+"\"")
+                                            "File Already Exists: \""+fileLoc+"\"")
 
                                     self.logger.log(
                                         "Linking File: \""+fileNames[i]+"\" to \""+projectName+"\"")
                                     self.scraperDatabase["pcbBoards"].update_one({'_id': doc_id}, {'$push': {
-                                        'files': {'fileName': fileNames[i], 'filetype': fileExts[i], 'fileHash': fileHash}}})
+                                        'files': {'fileName': fileNames[i], 'filetype': fileExts[i], 'fileHash': fileHash, 'fileLoc': fileLoc}}})
 
                                     self.logger.log(
                                         "Downloading Schematic File: \""+fileDownloadURLs[j]+"\"")
@@ -252,29 +275,27 @@ class gitScraper:
                                     schematicFile = req.content
                                     fileHash = hashlib.sha224(
                                         schematicFile).digest()
-                                    schematicFile = schematicFile.decode(
-                                        'utf-8', 'ignore')
 
-                                    if not self.scraperDatabase["pcbFiles"].find_one({'fileHash': fileHash}):
-                                        file_id = self.scraperDatabase["pcbFiles"].insert_one(
-                                            {'fileName': fileNames[j], 'fileHash': fileHash, 'fileContents': schematicFile}).inserted_id
+                                    fileLoc = os.path.join(
+                                        fileSaveLocation, fileNames[j])
+                                    if not Path(fileLoc).exists():
+                                        open(fileLoc, 'wb').write(boardFile)
                                         self.logger.log(
-                                            "Uploading File: \""+fileNames[j]+"\"")
+                                            "Saveing File: \""+fileLoc+"\"")
                                     else:
-                                        file_id = self.scraperDatabase["pcbFiles"].find_one(
-                                            {'fileHash': fileHash}).get('_id')
                                         self.logger.log(
-                                            "File Exists: \""+fileNames[j]+"\", HASH=\""+str(fileHash)+"\"")
+                                            "File Already Exists: \""+fileLoc+"\"")
 
                                     self.logger.log(
                                         "Linking File: \""+fileNames[j]+"\" to \""+projectName+"\"")
                                     self.scraperDatabase["pcbBoards"].update_one({'_id': doc_id}, {'$push': {
-                                        'files': {'fileName': fileNames[j], 'filetype': fileExts[j], 'fileHash': fileHash}}})
+                                        'files': {'fileName': fileNames[j], 'filetype': fileExts[j], 'fileHash': fileHash, 'fileLoc': fileLoc}}})
 
                                 else:
                                     self.logger.log(
                                         "Board "+projectName+" Exists in Database pcbBoards")
                             except:
+                                # else:
                                 self.logger.log(
                                     "Error with \""+projectName+"\"")
                                 if self.scraperDatabase["pcbBoards"].find_one({'userID': _userName, 'name': projectName}):
